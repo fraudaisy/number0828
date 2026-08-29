@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1-15 數字英文大挑戰！Count & Learn</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Quicksand:wght@600;700;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --bg-grad-1: #FFE5EC;
+            --bg-grad-2: #E8DFF5;
+            --pastel-yellow: #FFF3B0;
+            --pastel-green: #C1F0C1;
+            --pastel-blue: #B5E2FA;
+            --pastel-pink: #FFC6FF;
+            --pastel-purple: #E0C3FC;
+            --pastel-orange: #FFE5D9;
+            --text-dark: #332C54;
+        }
+
+        body {
+            font-family: 'Quicksand', 'Fredoka', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #FFE5EC 0%, #E8DFF5 50%, #D8F3DC 100%);
+            min-height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 浮動貼紙背景動畫 */
+        .floating-bg-item {
+            position: absolute;
+            pointer-events: none;
+            animation: floatSlow 6s ease-in-out infinite alternate;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.1));
+            z-index: 0;
+        }
+
+        @keyframes floatSlow {
+            0% { transform: translateY(0px) rotate(0deg) scale(1); }
+            100% { transform: translateY(-20px) rotate(10deg) scale(1.08); }
+        }
+
+        /* 卡片邊框與陰影加強 */
+        .cute-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 4px solid var(--text-dark);
+            box-shadow: 6px 6px 0px var(--text-dark);
+            border-radius: 28px;
+        }
+
+        .cute-btn {
+            border: 3.5px solid var(--text-dark);
+            box-shadow: 0 5px 0px var(--text-dark);
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .cute-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 0px var(--text-dark);
+        }
+
+        .cute-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0px var(--text-dark);
+        }
+
+        /* 答對 bounce / 答錯 shake */
+        .bounce-anim {
+            animation: bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.25) translateY(-15px) rotate(-3deg); }
+        }
+
+        .shake-anim {
+            animation: shake 0.4s ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-12px) rotate(-3deg); }
+            40% { transform: translateX(12px) rotate(3deg); }
+            60% { transform: translateX(-8px) rotate(-1deg); }
+            80% { transform: translateX(8px) rotate(1deg); }
+        }
+
+        /* 貼紙出現動畫 */
+        .sticker-item {
+            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        /* 模式按鈕切換樣式 */
+        .mode-tab.active {
+            background-color: var(--pastel-yellow) !important;
+            border-color: var(--text-dark) !important;
+            color: var(--text-dark) !important;
+            font-weight: 900;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-3 md:p-6 relative overflow-x-hidden min-h-screen">
+
+    <!-- 背景裝飾圖標 -->
+    <div class="floating-bg-item text-4xl" style="top: 5%; left: 5%; animation-delay: 0s;">🦄</div>
+    <div class="floating-bg-item text-4xl" style="top: 10%; right: 7%; animation-delay: 1s;">🌈</div>
+    <div class="floating-bg-item text-4xl" style="bottom: 8%; left: 6%; animation-delay: 2s;">🚀</div>
+    <div class="floating-bg-item text-4xl" style="bottom: 12%; right: 8%; animation-delay: 0.5s;">🐥</div>
+    <div class="floating-bg-item text-4xl" style="top: 48%; left: 2%; animation-delay: 1.5s;">🍭</div>
+    <div class="floating-bg-item text-4xl" style="top: 52%; right: 3%; animation-delay: 2.5s;">⭐</div>
+
+    <!-- 主要遊戲容器 -->
+    <div class="game-container w-full max-w-2xl z-10 relative">
+
+        <!-- 頂部資訊列：生命值、分數、Combo -->
+        <div class="cute-card p-4 mb-4 flex justify-between items-center bg-white">
+            <div class="flex items-center gap-1 text-2xl" id="livesContainer">
+                ❤️❤️❤️❤️❤️
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span id="comboBadge" class="hidden bg-orange-400 text-white font-black px-3 py-1 rounded-full text-sm animate-pulse border-2 border-slate-800">
+                    🔥 2 Combo!
+                </span>
+                <div class="bg-amber-200 border-3 border-slate-800 px-4 py-1.5 rounded-2xl text-slate-800 font-extrabold text-lg shadow-[2px_2px_0px_#332C54]">
+                    分數: <span id="scoreDisplay" class="text-pink-600">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 教師與模式設定選單 -->
+        <div class="cute-card p-4 mb-4 bg-white/90">
+            <!-- 模式切換 -->
+            <div class="flex flex-wrap gap-2 justify-center mb-3">
+                <button onclick="setMode('num2word')" id="mode-num2word" class="mode-tab cute-btn active bg-slate-100 px-3 py-1.5 rounded-xl text-xs md:text-sm font-bold text-slate-700">
+                    🔢 數字看英文
+                </button>
+                <button onclick="setMode('word2num')" id="mode-word2num" class="mode-tab cute-btn bg-slate-100 px-3 py-1.5 rounded-xl text-xs md:text-sm font-bold text-slate-700">
+                    🔤 英文看數字
+                </button>
+                <button onclick="setMode('listening')" id="mode-listening" class="mode-tab cute-btn bg-slate-100 px-3 py-1.5 rounded-xl text-xs md:text-sm font-bold text-slate-700">
+                    🎧 聽力大考驗
+                </button>
+                <button onclick="setMode('counting')" id="mode-counting" class="mode-tab cute-btn bg-slate-100 px-3 py-1.5 rounded-xl text-xs md:text-sm font-bold text-slate-700">
+                    🍎 數數水果盤
+                </button>
+            </div>
+
+            <!-- 折疊式老師選單區域 -->
+            <details class="group">
+                <summary class="cursor-pointer text-center text-xs md:text-sm font-extrabold text-slate-700 hover:text-pink-500 transition">
+                    ⚙️ 老師選單：自訂練習範圍 (點擊展開/收合)
+                </summary>
+                <div class="mt-3 pt-3 border-t-2 border-dashed border-slate-200">
+                    <div class="grid grid-cols-5 gap-1.5 md:gap-2 mb-3" id="checkboxGrid"></div>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button onclick="selectQuickRange([1,2,3,4,5])" class="cute-btn bg-purple-100 text-slate-800 px-2.5 py-1 rounded-xl text-xs font-bold">1-5</button>
+                        <button onclick="selectQuickRange([6,7,8,9,10])" class="cute-btn bg-purple-100 text-slate-800 px-2.5 py-1 rounded-xl text-xs font-bold">6-10</button>
+                        <button onclick="selectQuickRange([11,12,13,14,15])" class="cute-btn bg-purple-100 text-slate-800 px-2.5 py-1 rounded-xl text-xs font-bold">11-15</button>
+                        <button onclick="selectAllNumbers(true)" class="cute-btn bg-sky-200 text-slate-800 px-2.5 py-1 rounded-xl text-xs font-bold">✨ 全選</button>
+                        <button onclick="selectAllNumbers(false)" class="cute-btn bg-pink-200 text-slate-800 px-2.5 py-1 rounded-xl text-xs font-bold">🧹 清除</button>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- 核心題目卡片 -->
+        <div id="questionCard" class="cute-card p-6 mb-5 text-center bg-white relative overflow-hidden transition-all duration-300">
+            <div class="flex justify-between items-center mb-2">
+                <span id="questionTag" class="bg-amber-100 border-2 border-slate-800 text-slate-800 text-xs font-black px-3 py-1 rounded-full shadow-[2px_2px_0px_#332C54]">
+                    Count & Learn
+                </span>
+                <!-- 發音按鈕 -->
+                <button id="speechBtn" onclick="speakCurrentTarget()" class="cute-btn bg-pink-200 hover:bg-pink-300 text-slate-800 p-2 rounded-full text-xl flex items-center justify-center transition" title="朗讀英文">
+                    🔊
+                </button>
+            </div>
+
+            <!-- 題目主展示區 -->
+            <div class="my-4 flex flex-col items-center justify-center min-h-[110px]">
+                <div id="targetDisplay" class="text-6xl md:text-7xl font-black text-pink-500 drop-shadow-[3px_3px_0px_#332C54]">
+                    1
+                </div>
+                <div id="subHint" class="text-sm font-bold text-slate-500 mt-2 hidden">
+                    點擊喇叭按鈕再聽一次！
+                </div>
+            </div>
+
+            <!-- 可愛幾何/水果圖案數數貼紙區 -->
+            <div id="stickerContainer" class="flex flex-wrap justify-center items-center gap-2 mt-3 p-3 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl min-h-[64px]">
+            </div>
+        </div>
+
+        <!-- 三個選項按鈕區 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="optionsContainer">
+            <button onclick="checkAnswer(0)" class="option-btn cute-btn bg-amber-100 text-slate-800 text-2xl font-black py-4 rounded-2xl border-4 border-slate-800">one</button>
+            <button onclick="checkAnswer(1)" class="option-btn cute-btn bg-emerald-100 text-slate-800 text-2xl font-black py-4 rounded-2xl border-4 border-slate-800">two</button>
+            <button onclick="checkAnswer(2)" class="option-btn cute-btn bg-sky-100 text-slate-800 text-2xl font-black py-4 rounded-2xl border-4 border-slate-800">three</button>
+        </div>
+    </div>
+
+    <!-- 訊息提示 Modal / Toast -->
+    <div id="toastMessage" class="fixed top-6 left-1/2 -translate-x-1/2 bg-amber-300 border-4 border-slate-800 text-slate-800 font-extrabold px-6 py-3 rounded-2xl text-lg shadow-[4px_4px_0px_#332C54] transition-all duration-300 transform -translate-y-20 opacity-0 z-50 pointer-events-none">
+        請至少勾選 1 個數字喔！
+    </div>
+
+    <!-- 遊戲結束 Modal -->
+    <div id="gameOverModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="cute-card bg-white p-8 max-w-sm w-full text-center relative animate-[popIn_0.3s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+            <div class="text-6xl mb-3">🎮</div>
+            <h2 class="text-3xl font-black text-pink-500 mb-2">大挑戰結束！</h2>
+            <p class="text-slate-600 font-bold mb-4" id="gameOverSummary">你的最終得分是: 0 分</p>
+            <button onclick="restartGame()" class="cute-btn bg-amber-300 hover:bg-amber-400 text-slate-800 font-black text-xl px-8 py-3 rounded-2xl w-full">
+                再玩一次 🚀
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API 簡易音效生成器 (無需外部音訊檔)
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioCtx();
+            }
+        }
+
+        function playSound(type) {
+            try {
+                initAudio();
+                if (!audioCtx) return;
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'correct') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.25); // C6
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(140, now + 0.1);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                }
+            } catch (e) {
+                console.log('Audio playing suppressed', e);
+            }
+        }
+
+        // 數字英文對照表
+        const numberData = {
+            1: "one", 2: "two", 3: "three", 4: "four", 5: "five",
+            6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten",
+            11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen"
+        };
+
+        const emojiPool = ["🍎", "⭐", "🍓", "🐥", "🎈", "🌸", "🍕", "🧸", "🍩", "🍬"];
+
+        // 遊戲狀態 Variables
+        let activeNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        let currentTarget = 1;
+        let score = 0;
+        let lives = 5;
+        let combo = 0;
+        let isAnswering = false;
+        let currentMode = 'num2word'; // 'num2word' | 'word2num' | 'listening' | 'counting'
+
+        // 初始化教師勾選選單
+        function initCheckboxGrid() {
+            const grid = document.getElementById('checkboxGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 15; i++) {
+                const isChecked = activeNumbers.includes(i);
+                const label = document.createElement('label');
+                label.className = `checkbox-item flex items-center justify-center p-1.5 md:p-2 rounded-xl border-2 cursor-pointer font-black text-sm md:text-base transition ${isChecked ? 'bg-amber-200 border-slate-800 text-slate-800' : 'bg-slate-100 border-slate-300 text-slate-400'}`;
+                label.id = `label-${i}`;
+                label.innerHTML = `
+                    <input type="checkbox" value="${i}" ${isChecked ? 'checked' : ''} onchange="toggleNumber(${i})" class="hidden">
+                    ${i}
+                `;
+                grid.appendChild(label);
+            }
+        }
+
+        function toggleNumber(num) {
+            playSound('click');
+            const idx = activeNumbers.indexOf(num);
+            if (idx > -1) {
+                if (activeNumbers.length <= 1) {
+                    showToast("至少需要勾選 1 個數字喔！");
+                    initCheckboxGrid(); // 恢復選取
+                    return;
+                }
+                activeNumbers.splice(idx, 1);
+            } else {
+                activeNumbers.push(num);
+            }
+            activeNumbers.sort((a, b) => a - b);
+            initCheckboxGrid();
+            nextQuestion();
+        }
+
+        function selectAllNumbers(select) {
+            playSound('click');
+            if (select) {
+                activeNumbers = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+            } else {
+                activeNumbers = [1]; // 保留第一個
+                showToast("已保留基本數字 1");
+            }
+            initCheckboxGrid();
+            nextQuestion();
+        }
+
+        function selectQuickRange(arr) {
+            playSound('click');
+            activeNumbers = [...arr];
+            initCheckboxGrid();
+            nextQuestion();
+        }
+
+        function setMode(mode) {
+            playSound('click');
+            currentMode = mode;
+            document.querySelectorAll('.mode-tab').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`mode-${mode}`).classList.add('active');
+            nextQuestion();
+        }
+
+        // 真人發音 TTS 朗讀
+        function speakCurrentTarget() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // 停止先前的聲音
+                const word = numberData[currentTarget];
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.85; // 稍微放慢，適合兒童學習
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 產生下一題
+        function nextQuestion() {
+            isAnswering = false;
+
+            const card = document.getElementById('questionCard');
+            const targetDisplay = document.getElementById('targetDisplay');
+            const stickerContainer = document.getElementById('stickerContainer');
+            const questionTag = document.getElementById('questionTag');
+            const subHint = document.getElementById('subHint');
+
+            card.classList.remove('shake-anim');
+            targetDisplay.classList.remove('bounce-anim');
+
+            if (activeNumbers.length === 0) {
+                activeNumbers = [1, 2, 3];
+                initCheckboxGrid();
+            }
+
+            // 隨機選題目數字
+            currentTarget = activeNumbers[Math.floor(Math.random() * activeNumbers.length)];
+
+            // 依模式更新 UI 呈現
+            stickerContainer.innerHTML = '';
+            subHint.classList.add('hidden');
+
+            if (currentMode === 'num2word') {
+                questionTag.innerText = "數字看英文 (Match Number)";
+                targetDisplay.innerText = currentTarget;
+                targetDisplay.className = "text-6xl md:text-7xl font-black text-pink-500 drop-shadow-[3px_3px_0px_#332C54]";
+                renderStickers(currentTarget, stickerContainer);
+            } else if (currentMode === 'word2num') {
+                questionTag.innerText = "英文看數字 (Match Word)";
+                targetDisplay.innerText = numberData[currentTarget];
+                targetDisplay.className = "text-4xl md:text-6xl font-black text-indigo-500 drop-shadow-[3px_3px_0px_#332C54] lowercase tracking-wider";
+            } else if (currentMode === 'listening') {
+                questionTag.innerText = "聽力大考驗 (Listen & Pick)";
+                targetDisplay.innerText = "🎧 Listen!";
+                targetDisplay.className = "text-5xl font-black text-amber-500 drop-shadow-[3px_3px_0px_#332C54]";
+                subHint.classList.remove('hidden');
+                // 自動朗讀題目
+                setTimeout(() => speakCurrentTarget(), 200);
+            } else if (currentMode === 'counting') {
+                questionTag.innerText = "數數水果盤 (Count Items)";
+                targetDisplay.innerText = "❓";
+                targetDisplay.className = "text-6xl font-black text-emerald-500 drop-shadow-[3px_3px_0px_#332C54]";
+                renderStickers(currentTarget, stickerContainer);
+            }
+
+            // 產生干擾選項 (1 正解 + 2 干擾)
+            let options = [currentTarget];
+            let allNumbers = Array.from({length: 15}, (_, i) => i + 1);
+            let wrongPool = allNumbers.filter(n => n !== currentTarget);
+
+            while (options.length < 3) {
+                const randIdx = Math.floor(Math.random() * wrongPool.length);
+                options.push(wrongPool.splice(randIdx, 1)[0]);
+            }
+
+            options.sort(() => Math.random() - 0.5);
+
+            // 設置按鈕顯示文字
+            const buttons = document.getElementById('optionsContainer').children;
+            const btnColors = ['bg-amber-100', 'bg-emerald-100', 'bg-sky-100'];
+
+            for (let i = 0; i < 3; i++) {
+                buttons[i].className = `option-btn cute-btn ${btnColors[i]} text-slate-800 text-2xl font-black py-4 rounded-2xl border-4 border-slate-800`;
+
+                if (currentMode === 'num2word' || currentMode === 'listening' || currentMode === 'counting') {
+                    buttons[i].innerText = numberData[options[i]];
+                } else { // word2num
+                    buttons[i].innerText = options[i];
+                }
+                buttons[i].dataset.value = options[i];
+            }
+        }
+
+        // 渲染水果/貼紙數數區
+        function renderStickers(count, container) {
+            const randomEmoji = emojiPool[Math.floor(Math.random() * emojiPool.length)];
+            for (let i = 0; i < count; i++) {
+                const span = document.createElement('span');
+                span.className = 'sticker-item text-2xl md:text-3xl filter drop-shadow-[1px_2px_0px_rgba(0,0,0,0.15)]';
+                span.style.animationDelay = `${i * 0.03}s`;
+                span.innerText = randomEmoji;
+                container.appendChild(span);
+            }
+        }
+
+        // 檢查回答
+        function checkAnswer(btnIndex) {
+            if (isAnswering) return;
+            isAnswering = true;
+
+            const buttons = document.getElementById('optionsContainer').children;
+            const clickedBtn = buttons[btnIndex];
+            const clickedValue = parseInt(clickedBtn.dataset.value);
+            const card = document.getElementById('questionCard');
+            const targetDisplay = document.getElementById('targetDisplay');
+
+            if (clickedValue === currentTarget) {
+                // 答對處理
+                playSound('correct');
+                speakCurrentTarget(); // 自動發音正解
+
+                combo++;
+                score += 10 + (combo > 1 ? combo * 2 : 0);
+                document.getElementById('scoreDisplay').innerText = score;
+
+                // 更新 Combo Badge
+                const comboBadge = document.getElementById('comboBadge');
+                if (combo >= 2) {
+                    comboBadge.innerText = `🔥 ${combo} Combo!`;
+                    comboBadge.classList.remove('hidden');
+                }
+
+                clickedBtn.classList.remove('bg-amber-100', 'bg-emerald-100', 'bg-sky-100');
+                clickedBtn.classList.add('bg-green-300');
+                targetDisplay.classList.add('bounce-anim');
+
+                // 噴發彩帶粒子
+                confetti({
+                    particleCount: 60,
+                    spread: 70,
+                    origin: { y: 0.65 },
+                    colors: ['#FFC6FF', '#B5E2FA', '#FFF3B0', '#C1F0C1', '#FF85A1']
+                });
+
+                setTimeout(() => {
+                    nextQuestion();
+                }, 1200);
+
+            } else {
+                // 答錯處理
+                playSound('wrong');
+                combo = 0;
+                document.getElementById('comboBadge').classList.add('hidden');
+
+                lives--;
+                updateLivesDisplay();
+
+                clickedBtn.classList.remove('bg-amber-100', 'bg-emerald-100', 'bg-sky-100');
+                clickedBtn.classList.add('bg-rose-400', 'text-white');
+                card.classList.add('shake-anim');
+
+                // 標示正確答案
+                for (let btn of buttons) {
+                    if (parseInt(btn.dataset.value) === currentTarget) {
+                        btn.classList.remove('bg-amber-100', 'bg-emerald-100', 'bg-sky-100');
+                        btn.classList.add('bg-green-300');
+                    }
+                }
+
+                if (lives <= 0) {
+                    setTimeout(() => {
+                        document.getElementById('gameOverSummary').innerText = `你的最終得分是: ${score} 分！`;
+                        document.getElementById('gameOverModal').classList.remove('hidden');
+                        document.getElementById('gameOverModal').classList.add('flex');
+                    }, 800);
+                } else {
+                    setTimeout(() => {
+                        nextQuestion();
+                    }, 1400);
+                }
+            }
+        }
+
+        // 更新愛心
+        function updateLivesDisplay() {
+            const container = document.getElementById('livesContainer');
+            let heartsHtml = '';
+            for (let i = 0; i < 5; i++) {
+                if (i < lives) {
+                    heartsHtml += '❤️';
+                } else {
+                    heartsHtml += '<span class="opacity-30 grayscale">❤️</span>';
+                }
+            }
+            container.innerHTML = heartsHtml;
+        }
+
+        // 重新開始遊戲
+        function restartGame() {
+            playSound('click');
+            lives = 5;
+            score = 0;
+            combo = 0;
+            document.getElementById('scoreDisplay').innerText = score;
+            document.getElementById('comboBadge').classList.add('hidden');
+            updateLivesDisplay();
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('gameOverModal').classList.remove('flex');
+            nextQuestion();
+        }
+
+        // 顯示 Toast 訊息
+        function showToast(msg) {
+            const toast = document.getElementById('toastMessage');
+            toast.innerText = msg;
+            toast.classList.remove('-translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-20', 'opacity-0');
+            }, 2000);
+        }
+
+        // 初始化遊戲
+        window.onload = function() {
+            initCheckboxGrid();
+            nextQuestion();
+        };
+    </script>
+</body>
+</html>
